@@ -1,0 +1,5 @@
+# Copy to terraform.tfvars (git-ignored) to override defaults.
+region                = "ap-south-1"
+enable_rds            = true
+single_nat_gateway    = true
+allowed_ingress_cidrs = ["0.0.0.0/0"] # narrow to ["YOUR.IP.ADDR.ESS/32"] while testing

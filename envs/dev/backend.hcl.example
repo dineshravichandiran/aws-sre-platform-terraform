@@ -1,0 +1,6 @@
+# Copy to backend.hcl (git-ignored) and fill in the bucket created by bootstrap/.
+bucket       = "REPLACE-with-state_bucket-output-from-bootstrap"
+key          = "envs/dev/terraform.tfstate"
+region       = "ap-south-1"
+encrypt      = true
+use_lockfile = true # S3 native locking: a second apply waits or fails instead of corrupting state
