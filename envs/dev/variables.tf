@@ -48,7 +48,7 @@ variable "certificate_arn" {
 variable "allowed_ingress_cidrs" {
   description = "Who may reach the load balancer. Narrow this to your own IP while you test."
   type        = list(string)
-  default     = ["0.0.0.0/0"]
+  default     = ["103.241.80.138/32"]
 }
 
 variable "container_image" {
