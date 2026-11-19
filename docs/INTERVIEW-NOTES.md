@@ -9,9 +9,9 @@ says so. Say the same thing in the room.
 service in private subnets, a private PostgreSQL database, and SLO burn-rate alerts on the load balancer. State is in S3 with locking.
 GitHub Actions plans on every pull request with a read-only role and applies after a reviewer
 approves, signing in with OIDC so there are no stored AWS keys. checkov and tflint run on every
-push, and mocked-provider tests check the wiring. [Once applied: I deployed it, ran failure
-drills, and destroyed it the same day.] [Until then: it is validated and tested but I have not
-applied it to a live account yet.]"
+push, and mocked-provider tests check the wiring. I deployed it to a real account through the
+pipeline (56 resources), ran five drills, and destroyed it the same day. The write-up with my own
+numbers is in `docs/evidence/drills.md`."
 
 ## State
 
@@ -125,11 +125,28 @@ cannot pull images. Running tasks keep serving inbound traffic through the load 
 
 **What happens on a bad release?** The ECS deployment circuit breaker marks the deployment failed
 and rolls back to the last good task definition, while the old tasks keep serving. The runbook has
-a drill for it.
+a drill for it. I ran it: a bad image tag rolled back by itself after about 15 minutes, because the
+breaker waits for 10 failed tasks, not 3. I then reverted the code with a pull request so state and
+code agreed again (about 3 minutes to a healthy deployment).
+
+## Stories from the real run (all in `docs/evidence/drills.md`)
+
+- **Apply error:** OIDC sign-in failed with `Not authorized to perform sts:AssumeRoleWithWebIdentity`.
+  GitHub now puts immutable owner and repo IDs in the token subject for new repositories, so the trust
+  policy did not match. I changed the bootstrap variable, re-applied (2 role trust policies changed),
+  code untouched.
+- **A task dies:** stopped one of two tasks; back to 2 running and healthy in about 59 seconds. I did not
+  measure client errors during that time.
+- **Drift:** added a tag by hand; the plan showed `0 to add, 1 to change, 0 to destroy`; after I removed
+  it, `No changes`.
+- **State lock:** second plan failed with `Error acquiring the state lock`, `StatusCode: 412` (S3 native
+  lock, no DynamoDB).
+- **Load:** 20,000 requests, 50 concurrent, 0 failed, about 483 requests/s. Autoscaling did **not**
+  trigger (CPU peaked at 3.5% against a 60% target), so I do not claim scale-out. Testing it needs a
+  CPU-heavy endpoint.
+- **Cost:** not read from Cost Explorer yet. Do not quote a figure until it is.
 
 ## Questions to expect that this repo cannot answer yet
 
-- Running a real apply, hitting an error, and fixing it. Do the runbook before the interview, then
-  tell that story with real details.
 - Terraform at team scale: module registries, versioning modules, policy as code (OPA or Sentinel).
   Say you know where they fit and that you have not run them.
