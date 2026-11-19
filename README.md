@@ -14,7 +14,8 @@ budget alert.
 
 > **Status: applied to a real AWS account, drilled and destroyed on 20 November 2026 (IST).**
 > The stack was deployed through the pipeline (56 resources), exercised with five drills and torn
-> down the same night. Nothing is running now. Screenshots and the drill notes, with the numbers I
+> down the same night. Nothing from the `dev` stack is running now; the one-time `bootstrap/` stack
+> (state bucket, sign-in roles, budget alert) is still in place and costs almost nothing. Screenshots and the drill notes, with the numbers I
 > measured, are in [`docs/evidence/`](docs/evidence/drills.md). Cost Explorer has not been checked yet,
 > so there is no measured bill in this repository.
 > [`docs/RUNBOOK.md`](docs/RUNBOOK.md) is the procedure I followed.

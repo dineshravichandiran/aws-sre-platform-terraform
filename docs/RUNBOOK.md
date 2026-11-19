@@ -46,6 +46,8 @@ apply and destroy now waits for your approval.
 1. Create a branch, change a default in `envs/dev/variables.tf` (for example set
    `allowed_ingress_cidrs` to `["YOUR.IP.ADDR.ESS/32"]` so only you can reach the demo), open a
    pull request. The pipeline does not read `terraform.tfvars`, so defaults are what it deploys.
+   Your IP address then sits in a public repository's history, so use a private fork, or accept that
+   and put the default back to `0.0.0.0/0` in a follow-up commit once you have destroyed the stack.
 2. Confirm the `static` job passes and the `plan` job posts the plan as a comment.
    **Screenshot the plan comment.**
 3. Merge. The `apply` job waits for approval. Approve it.
