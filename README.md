@@ -1,0 +1,140 @@
+# AWS SRE Platform with Terraform
+
+[![terraform](https://github.com/dineshravichandiran/aws-sre-platform-terraform/actions/workflows/terraform.yml/badge.svg)](https://github.com/dineshravichandiran/aws-sre-platform-terraform/actions/workflows/terraform.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+A small but complete AWS platform written as reusable Terraform modules and deployed through
+GitHub Actions. A web service runs on ECS Fargate behind a load balancer, with a private PostgreSQL
+database, remote state, and a pipeline that plans on every pull request and applies only after a
+human approves.
+
+It exists to show how a platform is built so that it can be reviewed, repeated and torn down
+safely: modules, remote state with locking, no stored AWS keys, security scanning, cost tags and a
+budget alert.
+
+> **Status: validated and tested, not yet applied to a real AWS account.**
+> The checks in the table below ran in CI or locally. The first real `terraform apply` has not
+> happened yet, so no deployment screenshots are in this repository.
+> [`docs/RUNBOOK.md`](docs/RUNBOOK.md) is the exact procedure for the first apply and the destroy.
+> This table is updated only when a step has really been done.
+
+## What has been checked
+
+| Check | Result | How |
+|---|---|---|
+| `terraform fmt` and `terraform validate` | pass, all 4 modules and both stacks | CI, every push |
+| Unit and wiring tests | 19 tests pass | `terraform test` against a **mocked** AWS provider (no account, no cost) |
+| Security scan | 254 checks pass, 0 fail, 19 skipped with a written reason each | checkov, every push |
+| Lint | tflint with the Terraform and AWS rule sets | CI, every push |
+| `terraform plan` against a real account | not done yet | needs the one-time bootstrap in the runbook |
+| `terraform apply` and a live request | not done yet | same |
+| `terraform destroy` and a clean bill | not done yet | same |
+
+The mocked tests prove the modules are wired together and that key settings hold (private tasks,
+encrypted database, rollback on a bad release). They do not prove that AWS accepts every setting.
+Only a real apply proves that, which is why the status line above stays honest until it is done.
+
+## Architecture
+
+![Architecture](docs/architecture.svg)
+
+| Layer | What is built | Module |
+|---|---|---|
+| Network | VPC across two zones, public and private subnets, internet gateway, one shared NAT gateway, empty default security group, flow logs | [`modules/vpc`](modules/vpc) |
+| Entry point | Application load balancer, target group, health checks, optional HTTPS with redirect | [`modules/alb`](modules/alb) |
+| Compute | ECS cluster, Fargate service in private subnets, task and execution roles, CPU autoscaling, rollback on a failing release | [`modules/ecs-service`](modules/ecs-service) |
+| Data | PostgreSQL on RDS, encrypted, private, password generated and held by Secrets Manager | [`modules/rds`](modules/rds) |
+| Environment | Wires the four modules together for `dev` | [`envs/dev`](envs/dev) |
+| Foundation | State bucket, GitHub sign-in roles, monthly budget alert. Run once by hand | [`bootstrap`](bootstrap) |
+
+## How a change reaches AWS
+
+```mermaid
+flowchart LR
+    PR[Pull request] --> S[fmt, validate, tflint,<br/>checkov, tests]
+    S --> P["terraform plan<br/>(read-only role)"]
+    P --> C[Plan posted as<br/>a PR comment]
+    C --> M[Merge to main]
+    M --> A{Approval in the<br/>dev environment}
+    A --> AP["terraform apply<br/>(apply role, saved plan)"]
+    AP --> ST[(S3 state<br/>with lock file)]
+```
+
+- **No stored AWS keys.** GitHub proves who it is with a short-lived OIDC token and AWS hands back
+  temporary credentials. There is no access key in the repository or in GitHub secrets.
+- **Two roles with different power.** The plan role is read-only and can only be assumed by
+  `pull_request` runs of this repository. The apply role can only be assumed by jobs in the `dev`
+  GitHub environment, where a required reviewer can be set.
+- **The saved plan is what runs.** Apply uses the plan file from the same job, so what was planned
+  is exactly what is applied.
+- **State is protected.** The bucket is versioned (a bad apply can be rolled back), encrypted, has
+  public access blocked and refuses non-TLS requests. S3 native locking stops two applies from
+  writing at once.
+- **CI is green without AWS.** The plan and apply jobs skip themselves until the repository
+  variables from the runbook are set, so the static checks run for anyone who forks this.
+
+## Design decisions and the trade-offs I accepted
+
+| Decision | Why | Cost of the choice |
+|---|---|---|
+| ECS Fargate, not EKS | No nodes to patch, far less to operate for a single service. The Kubernetes side of my work is in [`eks-gitops-platform`](https://github.com/dineshravichandiran/cloud-devops-projects/tree/main/eks-gitops-platform). | Less portable than Kubernetes |
+| One shared NAT gateway | A NAT gateway is the biggest fixed cost in the stack | One zone failing can cut outbound traffic. `single_nat_gateway = false` gives one per zone |
+| S3 native locking, no DynamoDB table | One less resource to run and pay for | Needs Terraform 1.10 or newer |
+| RDS manages the password | The password never appears in code, tfvars or plan output | The task reads it from Secrets Manager at start, which needs the execution role grant (included) |
+| HTTP only unless `certificate_arn` is set | A demo has no domain to issue a certificate for | Not acceptable for anything real. Setting the variable turns on HTTPS and a redirect |
+| Tasks use the public nginx image | No build step, so the platform can be reviewed on its own | It proves the platform, not an application |
+| Apply role uses PowerUser plus a narrow IAM statement | Gets the apply working without handing out admin | Broader than ideal. Replace with a role built from the exact actions in the plan, see next steps |
+
+## Cost and teardown
+
+This stack costs money while it runs. The largest items are the NAT gateway, the load balancer, the
+Fargate tasks and the database. Rough size, **an estimate and not a quote**: on the order of
+US$0.10 to 0.15 per hour, so a few dollars for a same-day test. Check the AWS pricing pages for
+`ap-south-1` before you apply.
+
+- Everything is tagged `Project`, `Environment`, `Owner` and `ManagedBy` through the provider's
+  `default_tags`, so Cost Explorer can group by them.
+- `bootstrap/` creates a monthly budget with alerts at 80% actual and 100% forecast. For the budget
+  to filter on the `Project` tag, activate it as a cost allocation tag in the Billing console. AWS
+  takes up to a day to start reporting on it.
+- Destroy the same day: the `terraform-destroy` workflow (type `destroy-dev`) or
+  `terraform destroy` in `envs/dev`. The runbook ends with how to confirm nothing is left.
+
+## Repository layout
+
+```
+bootstrap/             one-time stack: state bucket, OIDC sign-in roles, budget (local state)
+modules/vpc/           network
+modules/alb/           load balancer
+modules/ecs-service/   Fargate service, roles, autoscaling
+modules/rds/           PostgreSQL
+envs/dev/              the environment that composes the modules (remote state)
+.github/workflows/     terraform.yml (checks, plan, apply), terraform-destroy.yml (manual)
+docs/                  architecture diagram, runbook, interview notes, evidence
+```
+
+## Run the checks yourself
+
+No AWS account is needed.
+
+```bash
+make all        # fmt, validate, tests, security scan
+```
+
+You need Terraform 1.10 or newer and `checkov` (`pip install checkov`).
+
+## What I would do next
+
+- Replace the PowerUser-based apply role with one generated from the exact actions in a real plan.
+- Add access logs to the load balancer and a web application firewall in front of it.
+- Customer-managed KMS keys for logs and state, and cross-region state replication.
+- End-to-end TLS to the tasks, and a real application image with a read-only root filesystem.
+- Multi-AZ database, Performance Insights and enhanced monitoring for production sizing.
+- Service level objectives and burn-rate alerts on the load balancer metrics.
+
+Each of these is something the scanner already reports as an accepted gap: the skip comments in
+the code name the check and give the reason.
+
+## License
+
+[MIT](LICENSE)

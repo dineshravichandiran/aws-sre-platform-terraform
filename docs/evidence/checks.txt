@@ -1,0 +1,71 @@
+# terraform fmt, validate and test output
+# Captured 2026-11-19T08:17Z with Terraform v1.17.0. No AWS account involved.
+
+terraform fmt -check -recursive
+== validate modules/vpc
+Success! The configuration is valid.
+
+== validate modules/alb
+Success! The configuration is valid.
+
+== validate modules/ecs-service
+Success! The configuration is valid.
+
+== validate modules/rds
+Success! The configuration is valid.
+
+== validate envs/dev
+Success! The configuration is valid.
+
+== validate bootstrap
+Success! The configuration is valid.
+
+== test modules/vpc
+tests/vpc.tftest.hcl... in progress
+  run "one_shared_nat_by_default"... pass
+  run "nat_per_zone_when_asked"... pass
+  run "public_subnets_do_not_auto_assign_public_ips"... pass
+  run "rejects_a_single_zone"... pass
+tests/vpc.tftest.hcl... tearing down
+tests/vpc.tftest.hcl... pass
+
+Success! 4 passed, 0 failed.
+== test modules/alb
+tests/alb.tftest.hcl... in progress
+  run "http_only_without_a_certificate"... pass
+  run "https_and_redirect_with_a_certificate"... pass
+  run "invalid_headers_are_dropped"... pass
+tests/alb.tftest.hcl... tearing down
+tests/alb.tftest.hcl... pass
+
+Success! 3 passed, 0 failed.
+== test modules/ecs-service
+tests/ecs.tftest.hcl... in progress
+  run "tasks_are_private"... pass
+  run "bad_releases_roll_back"... pass
+  run "no_secret_policy_without_secrets"... pass
+  run "secret_policy_lists_exactly_the_secrets"... pass
+  run "db_egress_only_when_requested"... pass
+tests/ecs.tftest.hcl... tearing down
+tests/ecs.tftest.hcl... pass
+
+Success! 5 passed, 0 failed.
+== test modules/rds
+tests/rds.tftest.hcl... in progress
+  run "database_is_private_and_encrypted"... pass
+  run "password_is_never_in_the_code"... pass
+  run "one_ingress_rule_per_client"... pass
+  run "final_snapshot_when_not_skipped"... pass
+tests/rds.tftest.hcl... tearing down
+tests/rds.tftest.hcl... pass
+
+Success! 4 passed, 0 failed.
+== test envs/dev
+tests/wiring.tftest.hcl... in progress
+  run "default_environment_plans"... pass
+  run "database_can_be_turned_off"... pass
+  run "needs_exactly_two_zones"... pass
+tests/wiring.tftest.hcl... tearing down
+tests/wiring.tftest.hcl... pass
+
+Success! 3 passed, 0 failed.
