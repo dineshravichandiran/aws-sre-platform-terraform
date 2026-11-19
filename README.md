@@ -23,8 +23,8 @@ budget alert.
 | Check | Result | How |
 |---|---|---|
 | `terraform fmt` and `terraform validate` | pass, all 4 modules and both stacks | CI, every push |
-| Unit and wiring tests | 19 tests pass | `terraform test` against a **mocked** AWS provider (no account, no cost) |
-| Security scan | 254 checks pass, 0 fail, 19 skipped with a written reason each | checkov, every push |
+| Unit and wiring tests | 26 tests pass | `terraform test` against a **mocked** AWS provider (no account, no cost) |
+| Security scan | 259 checks pass, 0 fail, 20 skipped with a written reason each | checkov, every push |
 | Lint | tflint with the Terraform and AWS rule sets | CI, every push |
 | `terraform plan` against a real account | not done yet | needs the one-time bootstrap in the runbook |
 | `terraform apply` and a live request | not done yet | same |
@@ -43,8 +43,9 @@ Only a real apply proves that, which is why the status line above stays honest u
 | Network | VPC across two zones, public and private subnets, internet gateway, one shared NAT gateway, empty default security group, flow logs | [`modules/vpc`](modules/vpc) |
 | Entry point | Application load balancer, target group, health checks, optional HTTPS with redirect | [`modules/alb`](modules/alb) |
 | Compute | ECS cluster, Fargate service in private subnets, task and execution roles, CPU autoscaling, rollback on a failing release | [`modules/ecs-service`](modules/ecs-service) |
+| Reliability | Availability and latency objectives, fast and slow burn-rate alerts, a dashboard, a runbook and a postmortem template | [`modules/slo`](modules/slo), [`docs/slo`](docs/slo) |
 | Data | PostgreSQL on RDS, encrypted, private, password generated and held by Secrets Manager | [`modules/rds`](modules/rds) |
-| Environment | Wires the four modules together for `dev` | [`envs/dev`](envs/dev) |
+| Environment | Wires the modules together for `dev` | [`envs/dev`](envs/dev) |
 | Foundation | State bucket, GitHub sign-in roles, monthly budget alert. Run once by hand | [`bootstrap`](bootstrap) |
 
 ## How a change reaches AWS
@@ -85,6 +86,22 @@ flowchart LR
 | Tasks use the public nginx image | No build step, so the platform can be reviewed on its own | It proves the platform, not an application |
 | Apply role uses PowerUser plus a narrow IAM statement | Gets the apply working without handing out admin | Broader than ideal. Replace with a role built from the exact actions in the plan, see next steps |
 
+## Reliability: SLOs and burn-rate alerts
+
+The service has a 99.9% availability objective over 30 days (an error budget of about 43 minutes)
+and a p99 latency objective of one second. [`modules/slo`](modules/slo) turns that into CloudWatch
+alarms using multiwindow burn rates: a fast rule (14.4x over 1 hour and 5 minutes, about 2% of the
+budget gone in an hour) and a slow rule (6x over 6 hours and 30 minutes). Both go to an SNS topic,
+and a dashboard shows the indicators against the budget line.
+
+- [`docs/slo/SLO.md`](docs/slo/SLO.md): indicators, objectives, the burn-rate arithmetic, error
+  budget policy and the known limits.
+- [`docs/slo/RUNBOOK-high-burn.md`](docs/slo/RUNBOOK-high-burn.md): what to do when an alert fires.
+- [`docs/slo/POSTMORTEM-TEMPLATE.md`](docs/slo/POSTMORTEM-TEMPLATE.md): blameless postmortem template.
+
+Verified so far: the thresholds and window logic by mocked tests. Not verified yet: firing against
+real traffic. The runbook's load drill is how that gets done.
+
 ## Cost and teardown
 
 This stack costs money while it runs. The largest items are the NAT gateway, the load balancer, the
@@ -108,9 +125,10 @@ modules/vpc/           network
 modules/alb/           load balancer
 modules/ecs-service/   Fargate service, roles, autoscaling
 modules/rds/           PostgreSQL
+modules/slo/           SLO alerts and dashboard
 envs/dev/              the environment that composes the modules (remote state)
 .github/workflows/     terraform.yml (checks, plan, apply), terraform-destroy.yml (manual)
-docs/                  architecture diagram, runbook, interview notes, evidence
+docs/                  architecture diagram, runbook, interview notes, SLO docs, evidence
 ```
 
 ## Run the checks yourself
@@ -130,7 +148,7 @@ You need Terraform 1.10 or newer and `checkov` (`pip install checkov`).
 - Customer-managed KMS keys for logs and state, and cross-region state replication.
 - End-to-end TLS to the tasks, and a real application image with a read-only root filesystem.
 - Multi-AZ database, Performance Insights and enhanced monitoring for production sizing.
-- Service level objectives and burn-rate alerts on the load balancer metrics.
+- Run the SLO alerts against real load (the runbook has the drill) and tune the thresholds from what the service actually does.
 
 Each of these is something the scanner already reports as an accepted gap: the skip comments in
 the code name the check and give the reason.

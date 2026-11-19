@@ -1,5 +1,5 @@
 # terraform fmt, validate and test output
-# Captured 2026-11-19T08:17Z with Terraform v1.17.0. No AWS account involved.
+# Captured 2026-11-19T08:21Z with Terraform v1.17.0. No AWS account involved.
 
 terraform fmt -check -recursive
 == validate modules/vpc
@@ -12,6 +12,9 @@ Success! The configuration is valid.
 Success! The configuration is valid.
 
 == validate modules/rds
+Success! The configuration is valid.
+
+== validate modules/slo
 Success! The configuration is valid.
 
 == validate envs/dev
@@ -60,6 +63,19 @@ tests/rds.tftest.hcl... tearing down
 tests/rds.tftest.hcl... pass
 
 Success! 4 passed, 0 failed.
+== test modules/slo
+tests/slo.tftest.hcl... in progress
+  run "four_burn_windows_and_two_pages"... pass
+  run "fast_burn_threshold_is_14_4_times_the_budget"... pass
+  run "stricter_objective_lowers_the_thresholds"... pass
+  run "short_windows_are_shorter_than_long_windows"... pass
+  run "no_traffic_is_not_an_outage"... pass
+  run "email_subscription_only_when_given"... pass
+  run "rejects_an_objective_of_100_percent"... pass
+tests/slo.tftest.hcl... tearing down
+tests/slo.tftest.hcl... pass
+
+Success! 7 passed, 0 failed.
 == test envs/dev
 tests/wiring.tftest.hcl... in progress
   run "default_environment_plans"... pass

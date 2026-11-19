@@ -67,6 +67,16 @@ module "ecs" {
   secrets     = var.enable_rds ? { DB_CREDENTIALS = module.rds[0].master_secret_arn } : {}
 }
 
+module "slo" {
+  source = "../../modules/slo"
+
+  name                    = local.name
+  alb_arn_suffix          = module.alb.arn_suffix
+  target_group_arn_suffix = module.alb.target_group_arn_suffix
+  slo_target              = var.slo_target
+  alarm_email             = var.alarm_email
+}
+
 module "rds" {
   count  = var.enable_rds ? 1 : 0
   source = "../../modules/rds"

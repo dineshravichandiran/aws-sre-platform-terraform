@@ -6,7 +6,7 @@ says so. Say the same thing in the room.
 ## The one-minute version
 
 "I built a small AWS platform as Terraform modules: a VPC across two zones, an ALB, an ECS Fargate
-service in private subnets, and a private PostgreSQL database. State is in S3 with locking.
+service in private subnets, a private PostgreSQL database, and SLO burn-rate alerts on the load balancer. State is in S3 with locking.
 GitHub Actions plans on every pull request with a read-only role and applies after a reviewer
 approves, signing in with OIDC so there are no stored AWS keys. checkov and tflint run on every
 push, and mocked-provider tests check the wiring. [Once applied: I deployed it, ran failure
@@ -76,7 +76,7 @@ exact actions a real plan and apply need.
 load balancer. The RDS password is generated and stored by Secrets Manager and never appears in
 code or plan output. Buckets block public access and refuse non-TLS requests.
 
-**What did the scanner say?** 254 checks pass, none fail. 19 are skipped, and each skip sits next to
+**What did the scanner say?** 259 checks pass, none fail. 20 are skipped, and each skip sits next to
 the resource with the reason, for example Multi-AZ is off to halve the demo cost. I did not turn
 checks off to get a green result; where a finding was fair I fixed it (longer log retention,
 pinned zones, a narrower IAM statement).
@@ -84,6 +84,29 @@ pinned zones, a narrower IAM statement).
 **How do you control cost?** Tags on everything through `default_tags`, a budget alert at 80%
 actual and 100% forecast, one shared NAT gateway, small instance sizes, and destroying the same
 day. The NAT gateway and the load balancer are the biggest fixed costs.
+
+## SLOs and alerting
+
+**How do you define an SLO?** Start from what the user feels, pick an indicator that measures it,
+then set a target the service can really hold. Here: availability is the share of requests that
+did not fail on the server side (target and load balancer 5xx over requests), objective 99.9% over
+30 days. That leaves an error budget of 0.1%, about 43 minutes.
+
+**What is an error budget for?** It turns reliability into a number to spend. While there is
+budget, ship. As it runs low, slow down risky change. It ends the argument between "ship faster"
+and "make it more reliable" because both are measured against the same figure.
+
+**Why burn-rate alerts instead of "error rate above 1%"?** A fixed threshold either pages on short
+spikes that do not matter or misses a slow leak that quietly eats the month. Burn rate asks how
+fast the budget is being used. 14.4x for an hour means 2% of the month's budget is gone in one
+hour, so page now. 6x for six hours means 5% is gone, so page less urgently.
+
+**Why two windows on each rule?** The long window proves the problem is big enough to matter. The
+short window proves it is still happening, so the alert clears quickly once it is fixed.
+
+**What are the limits of what you built?** It is the CloudWatch approximation: fixed evaluation
+periods, not sliding windows. The thresholds are not tuned on real traffic, because the stack has
+not served any yet. A real service would also have per-endpoint objectives.
 
 ## Design questions
 

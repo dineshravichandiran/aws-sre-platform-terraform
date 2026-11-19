@@ -1,10 +1,9 @@
 # checkov 3.4.3 summary
-# Captured 2026-11-19T08:17Z. Skipped checks and reasons are in the code next to each resource.
+# Captured 2026-11-19T08:22Z. Skipped checks and reasons are in the code next to each resource.
 
 terraform scan results:
 
-Passed checks: 254, Failed checks: 0, Skipped checks: 19
-
+Passed checks: 259, Failed checks: 0, Skipped checks: 20
 
 
 ## Skips (check id : reason)
@@ -21,6 +20,7 @@ CKV_AWS_157:Multi-AZ is the multi_az variable and is off for the demo to halve t
 CKV_AWS_158:Log group uses the default AWS-managed encryption. A customer-managed KMS key costs about $1 a month; listed in README as a next step.
 CKV_AWS_158:Log group uses the default AWS-managed encryption. A customer-managed KMS key costs about $1 a month; listed in README as a next step.
 CKV_AWS_18:Access logging needs a second bucket; listed in README as a next step.
+CKV_AWS_26:The AWS-managed SNS key does not let CloudWatch publish to the topic, so an encrypted topic needs a customer-managed key with a CloudWatch statement. Listed in README as a next step.
 CKV_AWS_293:Deletion protection is the deletion_protection variable and is off so the demo can be destroyed. Turn it on for anything real.
 CKV_AWS_2:HTTP only when no certificate is supplied. Setting certificate_arn turns on HTTPS and makes this listener redirect.
 CKV_AWS_336:The demo nginx image writes to /tmp and its cache directory. A production image should run with a read-only root filesystem.

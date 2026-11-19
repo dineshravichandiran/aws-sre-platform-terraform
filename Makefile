@@ -1,6 +1,6 @@
 # Everything here runs offline: no AWS account, no credentials, no cost.
-DIRS_VALIDATE := modules/vpc modules/alb modules/ecs-service modules/rds envs/dev bootstrap
-DIRS_TEST     := modules/vpc modules/alb modules/ecs-service modules/rds envs/dev
+DIRS_VALIDATE := modules/vpc modules/alb modules/ecs-service modules/rds modules/slo envs/dev bootstrap
+DIRS_TEST     := modules/vpc modules/alb modules/ecs-service modules/rds modules/slo envs/dev
 
 .PHONY: all fmt validate test scan
 all: fmt validate test scan

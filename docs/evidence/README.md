@@ -2,7 +2,7 @@
 
 | File | What it is |
 |---|---|
-| `checks.txt` | Output of `make fmt validate test`: format, validate and 19 mocked-provider tests |
+| `checks.txt` | Output of `make fmt validate test`: format, validate and 26 mocked-provider tests |
 | `checkov.txt` | Security scan summary and every skipped check with its reason |
 
 There are no deployment screenshots yet because the stack has not been applied to a real AWS

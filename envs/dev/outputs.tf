@@ -18,6 +18,16 @@ output "log_group_name" {
   value       = module.ecs.log_group_name
 }
 
+output "slo_dashboard" {
+  description = "CloudWatch dashboard with the SLIs against the objectives."
+  value       = module.slo.dashboard_name
+}
+
+output "alert_topic_arn" {
+  description = "SNS topic that receives the SLO alerts."
+  value       = module.slo.sns_topic_arn
+}
+
 output "database_endpoint" {
   description = "Database host and port, or null when the database is turned off."
   value       = var.enable_rds ? module.rds[0].endpoint : null

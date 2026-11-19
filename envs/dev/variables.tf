@@ -69,6 +69,18 @@ variable "enable_rds" {
   default     = true
 }
 
+variable "slo_target" {
+  description = "Availability objective for the service, as a fraction (0.999 = 99.9%)."
+  type        = number
+  default     = 0.999
+}
+
+variable "alarm_email" {
+  description = "Email that receives SLO alerts. Null creates the alert topic with no subscriber."
+  type        = string
+  default     = null
+}
+
 variable "owner" {
   description = "Value of the Owner cost-allocation tag."
   type        = string

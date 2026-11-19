@@ -32,6 +32,11 @@ run "default_environment_plans" {
     condition     = module.vpc.nat_gateway_count == 1
     error_message = "One shared NAT gateway by default."
   }
+
+  assert {
+    condition     = abs(module.slo.error_budget_fraction - 0.001) < 0.0000001
+    error_message = "The SLO module is wired in with a 99.9% objective."
+  }
 }
 
 run "database_can_be_turned_off" {
