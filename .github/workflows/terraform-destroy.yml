@@ -1,0 +1,54 @@
+name: terraform-destroy
+
+# Manual only. Tears the dev environment down so it stops costing money.
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "destroy-dev" to confirm'
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  TF_VERSION: "1.12.2"
+  AWS_REGION: ${{ vars.AWS_REGION || 'ap-south-1' }}
+
+jobs:
+  destroy:
+    name: destroy (dev)
+    if: inputs.confirm == 'destroy-dev'
+    runs-on: ubuntu-latest
+    environment: dev
+    permissions:
+      id-token: write
+      contents: read
+    defaults:
+      run:
+        working-directory: envs/dev
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: Sign in to AWS with OIDC (apply role)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_APPLY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Init
+        run: |
+          terraform init -input=false \
+            -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
+            -backend-config="key=envs/dev/terraform.tfstate" \
+            -backend-config="region=${{ env.AWS_REGION }}" \
+            -backend-config="encrypt=true" \
+            -backend-config="use_lockfile=true"
+
+      - name: Destroy
+        run: terraform destroy -input=false -lock-timeout=60s -no-color -auto-approve
