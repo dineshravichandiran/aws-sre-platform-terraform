@@ -12,11 +12,12 @@ It exists to show how a platform is built so that it can be reviewed, repeated a
 safely: modules, remote state with locking, no stored AWS keys, security scanning, cost tags and a
 budget alert.
 
-> **Status: validated and tested, not yet applied to a real AWS account.**
-> The checks in the table below ran in CI or locally. The first real `terraform apply` has not
-> happened yet, so no deployment screenshots are in this repository.
-> [`docs/RUNBOOK.md`](docs/RUNBOOK.md) is the exact procedure for the first apply and the destroy.
-> This table is updated only when a step has really been done.
+> **Status: applied to a real AWS account, drilled and destroyed on 20 November 2026 (IST).**
+> The stack was deployed through the pipeline (56 resources), exercised with five drills and torn
+> down the same night. Nothing is running now. Screenshots and the drill notes, with the numbers I
+> measured, are in [`docs/evidence/`](docs/evidence/drills.md). Cost Explorer has not been checked yet,
+> so there is no measured bill in this repository.
+> [`docs/RUNBOOK.md`](docs/RUNBOOK.md) is the procedure I followed.
 
 ## What has been checked
 
@@ -26,13 +27,15 @@ budget alert.
 | Unit and wiring tests | 26 tests pass | `terraform test` against a **mocked** AWS provider (no account, no cost) |
 | Security scan | 259 checks pass, 0 fail, 20 skipped with a written reason each | checkov, every push |
 | Lint | tflint with the Terraform and AWS rule sets | CI, every push |
-| `terraform plan` against a real account | not done yet | needs the one-time bootstrap in the runbook |
-| `terraform apply` and a live request | not done yet | same |
-| `terraform destroy` and a clean bill | not done yet | same |
+| `terraform plan` against a real account | done, 20 Nov 2026 | plan posted on pull request #7, screenshot in `docs/evidence/` |
+| `terraform apply` and a live request | done, 20 Nov 2026 | 56 resources added through the pipeline; nginx served by the load balancer, 2 healthy targets |
+| Drills (task kill, drift, state lock, load, bad release) | done, 20 Nov 2026 | [`docs/evidence/drills.md`](docs/evidence/drills.md); autoscaling did not trigger under the load test |
+| `terraform destroy` and a clean check | done, 20 Nov 2026 | destroy run succeeded; no load balancer, NAT gateway, database, Elastic IP or cluster left |
+| Real cost | not checked yet | Cost Explorer, grouped by the `Project` tag, after the next day's data appears |
 
 The mocked tests prove the modules are wired together and that key settings hold (private tasks,
 encrypted database, rollback on a bad release). They do not prove that AWS accepts every setting.
-Only a real apply proves that, which is why the status line above stays honest until it is done.
+The real apply on 20 November 2026 is what shows AWS accepts the settings. The SLO alarms were created by that apply, but I have not made them fire.
 
 ## Architecture
 
@@ -99,8 +102,9 @@ and a dashboard shows the indicators against the budget line.
 - [`docs/slo/RUNBOOK-high-burn.md`](docs/slo/RUNBOOK-high-burn.md): what to do when an alert fires.
 - [`docs/slo/POSTMORTEM-TEMPLATE.md`](docs/slo/POSTMORTEM-TEMPLATE.md): blameless postmortem template.
 
-Verified so far: the thresholds and window logic by mocked tests. Not verified yet: firing against
-real traffic. The runbook's load drill is how that gets done.
+Verified so far: the thresholds and window logic by mocked tests, and the alarms and dashboard were created
+by a real apply. Not verified: an alarm firing. The load drill sent 20000 requests with no errors, so no
+alarm was expected to fire.
 
 ## Cost and teardown
 

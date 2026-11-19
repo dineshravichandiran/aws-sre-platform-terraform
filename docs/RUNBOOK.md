@@ -116,7 +116,9 @@ status line. Until then the README must keep saying it has not been applied.
 | Symptom | Likely cause |
 |---|---|
 | `Error: Failed to get existing workspaces` or access denied on init | Wrong bucket name in `TF_STATE_BUCKET`, or the plan role is missing the state permissions |
-| `Not authorized to perform sts:AssumeRoleWithWebIdentity` | Role trust does not match: wrong repository name, or the job is not in the `dev` environment |
+| `Not authorized to perform sts:AssumeRoleWithWebIdentity` | Role trust does not match: wrong repository name, or the job is not in the `dev` environment. New GitHub repositories can also put immutable IDs in the token subject (`repo:owner@<id>/name@<id>:pull_request`); if the role trusts the plain `owner/name`, set `github_repository` in the bootstrap to the form shown in the token and re-apply the bootstrap |
+| CloudShell: `no space left on device` | The AWS provider is about 770 MB per `.terraform` directory and CloudShell has 1 GB. Delete old `.terraform` directories and set `TF_PLUGIN_CACHE_DIR` |
+| CloudShell: `terraform: command not found` | Terraform is not preinstalled. Put the binary in `~/bin` and add it to `PATH` each session |
 | ECS tasks stop with `CannotPullContainerError` | No route out: check the NAT gateway and the private route tables |
 | Targets stay unhealthy | Health check path or port does not match the container (`container_port`, `health_check_path`) |
 | `OIDC provider already exists` | Set `create_oidc_provider = false` in the bootstrap |
