@@ -54,7 +54,7 @@ variable "allowed_ingress_cidrs" {
 variable "container_image" {
   description = "Image the ECS service runs."
   type        = string
-  default     = "public.ecr.aws/nginx/nginx-unprivileged:no-such-tag"
+  default     = "public.ecr.aws/nginx/nginx-unprivileged:stable"
 }
 
 variable "container_port" {
