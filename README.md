@@ -16,8 +16,8 @@ budget alert.
 > The stack was deployed through the pipeline (56 resources), exercised with five drills and torn
 > down the same night. Nothing from the `dev` stack is running now; the one-time `bootstrap/` stack
 > (state bucket, sign-in roles, budget alert) is still in place and costs almost nothing. Screenshots and the drill notes, with the numbers I
-> measured, are in [`docs/evidence/`](docs/evidence/drills.md). Cost Explorer has not been checked yet,
-> so there is no measured bill in this repository.
+> measured, are in [`docs/evidence/`](docs/evidence/drills.md). The measured bill (Cost Explorer, 2026-11-19 UTC, the day
+> the stack ran) was about US$0.31 for the whole account that day; details and caveats are in the drill notes.
 > [`docs/RUNBOOK.md`](docs/RUNBOOK.md) is the procedure I followed.
 
 ## What has been checked
@@ -32,7 +32,7 @@ budget alert.
 | `terraform apply` and a live request | done, 20 Nov 2026 | 56 resources added through the pipeline; nginx served by the load balancer, 2 healthy targets |
 | Drills (task kill, drift, state lock, load, bad release) | done, 20 Nov 2026 | [`docs/evidence/drills.md`](docs/evidence/drills.md); autoscaling did not trigger under the load test |
 | `terraform destroy` and a clean check | done, 20 Nov 2026 | destroy run succeeded; no load balancer, NAT gateway, database, Elastic IP or cluster left |
-| Real cost | not checked yet | Cost Explorer, grouped by the `Project` tag, after the next day's data appears |
+| Real cost | about US$0.31 | Cost Explorer, whole-account total for 2026-11-19 UTC (stack up under 2 hours). Marked estimated by AWS; the `Project` tag is not an active cost allocation tag, so a per-tag split was not possible |
 
 The mocked tests prove the modules are wired together and that key settings hold (private tasks,
 encrypted database, rollback on a bad release). They do not prove that AWS accepts every setting.

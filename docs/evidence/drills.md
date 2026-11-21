@@ -103,5 +103,16 @@ Screenshots in this folder:
 - Ran `terraform-destroy` (`destroy-dev`), approved on the `dev` environment: run #1 succeeded, job 5m 59s.
 - Checked at 21:57:45 UTC that nothing was left: no load balancers, no NAT gateways, no RDS instances, no
   Elastic IPs, no ECS clusters, and no VPC tagged `Project=sre-platform`.
-- The stack existed for under two hours (first apply to destroy). Real cost still to be read from Cost
-  Explorer, grouped by the `Project` tag, once the next day's data appears.
+- The stack existed for under two hours (first apply to destroy).
+
+## Cost (read from Cost Explorer on 2026-11-21)
+
+- Account total for 2026-11-19 (UTC), the day the stack ran: **US$0.31**, flagged estimated by AWS. By service:
+  EC2-Other (NAT gateway and data) 0.13, load balancing 0.07, RDS 0.03, ECS 0.03, VPC (public IPv4) 0.03,
+  EC2 compute 0.02.
+- Grouping by the `Project` tag returned a single blank-value group, so the `Project` tag is not an active
+  cost allocation tag in this account. The figure above is therefore the whole account's cost for that day,
+  not a tag-filtered one. Everything on that day is a service this stack uses, but I did not separate out any
+  other usage.
+- Not part of this number: 2026-11-20 shows US$2.95 (mostly VPC charges), which comes from other labs run
+  that day, not from this stack.
